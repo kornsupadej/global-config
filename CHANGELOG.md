@@ -1,5 +1,11 @@
 # @kornsupadej/global-config
 
+## 0.1.3
+
+### Patch Changes
+
+- 720b256: Fix unknown file extension error
+
 ## 0.1.2
 
 ### Patch Changes
