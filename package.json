@@ -1,5 +1,5 @@
 {
-  "name": "global-config",
+  "name": "@kornsupadej/global-config",
   "version": "0.0.1",
   "description": "",
   "private": false,
@@ -9,7 +9,8 @@
     "build": "tsup",
     "lint": "tsc",
     "ci": "pnpm run lint && pnpm run build",
-    "release": "pnpm run lint && pnpm run build && changeset publish"
+    "release": "pnpm run lint && pnpm run build && changeset publish",
+    "version-package": "changeset version"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
