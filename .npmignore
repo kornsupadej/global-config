@@ -1,0 +1,11 @@
+# source & packages
+/src
+/node_modules
+
+# ci
+/.changeset
+/.github
+
+# etc.
+tsconfig.json
+tsup.config.ts
