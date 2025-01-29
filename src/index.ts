@@ -37,15 +37,15 @@ const resolveConfig = (conf: any) => {
 };
 
 const readDefaultConfig = import(
-  pathToFileURL(path.join(process.cwd(), `configs/default.ts`)).href
+  pathToFileURL(path.join(process.cwd(), `dist/configs/default.js`)).href
 );
 
 const readDevelopmentConfig = import(
-  pathToFileURL(path.join(process.cwd(), `configs/development.ts`)).href
+  pathToFileURL(path.join(process.cwd(), `dist/configs/development.js`)).href
 );
 
 const readProductionConfig = import(
-  pathToFileURL(path.join(process.cwd(), `configs/production.ts`)).href
+  pathToFileURL(path.join(process.cwd(), `dist/configs/production.js`)).href
 );
 
 const readConfigs = async () => {
@@ -58,7 +58,7 @@ const readConfigs = async () => {
 };
 
 const validateEnv = () => {
-  const files = globSync(`./configs/${process.env["NODE_ENV"]}.ts`);
+  const files = globSync(`./dist/configs/${process.env["NODE_ENV"]}.js`);
   if (!files.length) {
     if (process.env["NODE_ENV"]) {
       console.error(
@@ -84,4 +84,3 @@ export const initGlobalConfig = async () => {
   const { defs, envs } = await readConfigs();
   return resolveConfig(mergeConfig(defs, envs));
 };
-initGlobalConfig();
