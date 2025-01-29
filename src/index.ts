@@ -2,15 +2,13 @@ import chalk from "chalk";
 import { globSync } from "glob";
 import merge from "deepmerge";
 import path from "path";
-import { pathToFileURL } from "url";
 
 const isArray = (item: any) => Array.isArray(item);
 
 const isLiteralObject = (item: any) =>
   typeof item === "object" && !Array.isArray(item) && item !== null;
 
-const mergeConfig = (defs: any, envs: any, ...rest: any) =>
-  merge(defs, envs, ...rest);
+const mergeConfig = (...args: any) => merge(args[0], args[1]);
 
 const resolveConfig = (conf: any) => {
   if (typeof conf !== "object") return conf;
@@ -36,29 +34,28 @@ const resolveConfig = (conf: any) => {
     }, {});
 };
 
-const readDefaultConfig = import(
-  pathToFileURL(path.join(process.cwd(), `dist/configs/default.js`)).href
-);
+const readConfigs = () => {
+  const patterns: string[] = globSync(
+    path.resolve(
+      __dirname,
+      "configs",
+      `**/{default,${process.env["NODE_ENV"]}}.{js,ts}`
+    )
+  );
+  return patterns.reduce((confs: Record<string, any>, file: string) => {
+    const module = require(file);
+    const conf = module.default || module;
 
-const readDevelopmentConfig = import(
-  pathToFileURL(path.join(process.cwd(), `dist/configs/development.js`)).href
-);
+    confs[path.basename(file, path.extname(file))] = conf;
 
-const readProductionConfig = import(
-  pathToFileURL(path.join(process.cwd(), `dist/configs/production.js`)).href
-);
-
-const readConfigs = async () => {
-  const defs = await readDefaultConfig.then((module) => module.default);
-  const envs =
-    process.env["NODE_ENV"] === "production"
-      ? await readProductionConfig.then((module) => module.default)
-      : await readDevelopmentConfig.then((module) => module.default);
-  return { defs, envs };
+    return conf;
+  }, {});
 };
 
-const validateEnv = () => {
-  const files = globSync(`./dist/configs/${process.env["NODE_ENV"]}.js`);
+const validateEnv = (): void => {
+  const files = globSync(
+    path.resolve(__dirname, "configs", `**/${process.env["NODE_ENV"]}.{js,ts}`)
+  );
   if (!files.length) {
     if (process.env["NODE_ENV"]) {
       console.error(
@@ -79,8 +76,8 @@ const validateEnv = () => {
   }
 };
 
-export const initGlobalConfig = async () => {
+export const initGlobalConfig = () => {
   validateEnv();
-  const { defs, envs } = await readConfigs();
-  return resolveConfig(mergeConfig(defs, envs));
+  const conf = readConfigs();
+  return resolveConfig(mergeConfig(conf));
 };
