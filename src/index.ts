@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { globSync } from "glob";
 import merge from "deepmerge";
 import path from "path";
+import { pathToFileURL } from "url";
 
 const isArray = (item: any) => Array.isArray(item);
 
@@ -11,16 +12,16 @@ const isLiteralObject = (item: any) =>
 const mergeConfig = (defs: any, envs: any, ...rest: any) =>
   merge(defs, envs, ...rest);
 
-const extractConfig = (conf: any) => {
+const resolveConfig = (conf: any) => {
   if (typeof conf !== "object") return conf;
   return Object.keys(conf)
     .map((v: any) => {
       const envs = /^@(.*)/.exec(v);
       const cenvs = /^@(.*?):([^:]*)/.exec(v);
       const value: any = isLiteralObject(conf[v])
-        ? extractConfig(conf[v])
+        ? resolveConfig(conf[v])
         : isArray(conf[v])
-        ? conf[v].map((cf) => extractConfig(cf))
+        ? conf[v].map((cf) => resolveConfig(cf))
         : conf[v];
       if (cenvs && cenvs[1] && cenvs[2]) {
         return { [cenvs[1]]: process.env[cenvs[2].toUpperCase()] || value };
@@ -36,23 +37,23 @@ const extractConfig = (conf: any) => {
 };
 
 const readDefaultConfig = import(
-  path.join(process.cwd(), `configs/default.ts`)
+  pathToFileURL(path.join(process.cwd(), `configs/default.ts`)).href
 );
 
 const readDevelopmentConfig = import(
-  path.join(process.cwd(), `configs/development.ts`)
+  pathToFileURL(path.join(process.cwd(), `configs/development.ts`)).href
 );
 
 const readProductionConfig = import(
-  path.join(process.cwd(), `configs/production.ts`)
+  pathToFileURL(path.join(process.cwd(), `configs/production.ts`)).href
 );
 
 const readConfigs = async () => {
-  const defs = await readDefaultConfig.then(({ default: conf }) => conf);
+  const defs = await readDefaultConfig.then((module) => module.default);
   const envs =
     process.env["NODE_ENV"] === "production"
-      ? await readProductionConfig.then(({ default: conf }) => conf)
-      : await readDevelopmentConfig.then(({ default: conf }) => conf);
+      ? await readProductionConfig.then((module) => module.default)
+      : await readDevelopmentConfig.then((module) => module.default);
   return { defs, envs };
 };
 
@@ -81,5 +82,6 @@ const validateEnv = () => {
 export const initGlobalConfig = async () => {
   validateEnv();
   const { defs, envs } = await readConfigs();
-  return extractConfig(mergeConfig(defs, envs));
+  return resolveConfig(mergeConfig(defs, envs));
 };
+initGlobalConfig();
