@@ -1,5 +1,11 @@
 # @kornsupadej/global-config
 
+## 0.2.0
+
+### Minor Changes
+
+- 02775ac: Change dynamic imports to require instead
+
 ## 0.1.3
 
 ### Patch Changes
