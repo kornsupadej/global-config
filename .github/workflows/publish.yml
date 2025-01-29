@@ -7,21 +7,24 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 9
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 18.x
           cache: "pnpm"
 
-      - run: pnpm install --frozen-lockfile\
+      - run: pnpm install --frozen-lockfile
       - name: Create Release Pull Request or Publish
         id: changesets
-        uses: changeset/action@v1
+        uses: changesets/action@v1
         with:
-          publish: pnpm run build
+          publish: pnpm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

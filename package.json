@@ -2,12 +2,14 @@
   "name": "global-config",
   "version": "1.0.0",
   "description": "",
+  "private": false,
   "author": "Kornsupadej Suvarnakasa",
   "license": "ISC",
   "scripts": {
     "build": "tsup",
     "lint": "tsc",
-    "ci": "pnpm run lint && pnpm run build"
+    "ci": "pnpm run lint && pnpm run build",
+    "release": "pnpm run lint && pnpm run build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
