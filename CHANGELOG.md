@@ -1,5 +1,11 @@
 # @kornsupadej/global-config
 
+## 0.1.2
+
+### Patch Changes
+
+- 3a06884: Fix import bugs
+
 ## 0.1.1
 
 ### Patch Changes
