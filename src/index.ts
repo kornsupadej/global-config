@@ -103,14 +103,16 @@ const loadConfig = async (paths: {
 };
 
 type GlobalConfig = {
-  rootDir?: string;
-  configDir?: string;
+  rootDir: string;
+  configDir: string;
 };
-export const initGlobalConfig = async ({
-  rootDir = process.cwd(),
-  configDir = "configs",
-}: GlobalConfig): Promise<Record<string, any>> => {
-  const paths = validateConfig(rootDir, configDir);
+export const initGlobalConfig = async (
+  params: GlobalConfig = {
+    rootDir: process.cwd(),
+    configDir: "configs",
+  }
+): Promise<Record<string, any>> => {
+  const paths = validateConfig(params.rootDir, params.configDir);
   const { cmodule, emodule } = await loadConfig(paths);
   return resolveConfig(mergeConfig(cmodule, emodule));
 };
