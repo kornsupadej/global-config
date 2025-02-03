@@ -1,5 +1,11 @@
 # @kornsupadej/global-config
 
+## 0.3.0
+
+### Minor Changes
+
+- c9d66db: Fix import file bugs
+
 ## 0.2.0
 
 ### Minor Changes
