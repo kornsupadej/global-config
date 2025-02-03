@@ -1,16 +1,18 @@
 import chalk from "chalk";
-import { globSync } from "glob";
 import merge from "deepmerge";
-import path from "path";
+import { globSync } from "glob";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-const isArray = (item: any) => Array.isArray(item);
+const isArray = (item: any): boolean => Array.isArray(item);
 
-const isLiteralObject = (item: any) =>
+const isLiteralObject = (item: any): boolean =>
   typeof item === "object" && !Array.isArray(item) && item !== null;
 
-const mergeConfig = (...args: any) => merge(args[0], args[1]);
+const mergeConfig = (...args: any): Record<string, any> =>
+  merge(args[0], args[1] ?? args[0]);
 
-const resolveConfig = (conf: any) => {
+const resolveConfig = (conf: any): Record<string, any> => {
   if (typeof conf !== "object") return conf;
   return Object.keys(conf)
     .map((v: any) => {
@@ -19,7 +21,7 @@ const resolveConfig = (conf: any) => {
       const value: any = isLiteralObject(conf[v])
         ? resolveConfig(conf[v])
         : isArray(conf[v])
-        ? conf[v].map((cf) => resolveConfig(cf))
+        ? conf[v].map((cf: any) => resolveConfig(cf))
         : conf[v];
       if (cenvs && cenvs[1] && cenvs[2]) {
         return { [cenvs[1]]: process.env[cenvs[2].toUpperCase()] || value };
@@ -34,29 +36,37 @@ const resolveConfig = (conf: any) => {
     }, {});
 };
 
-const readConfigs = () => {
-  const patterns: string[] = globSync(
-    path.resolve(
-      __dirname,
-      "configs",
-      `**/{default,${process.env["NODE_ENV"]}}.{js,ts}`
-    )
+const validateConfig = (
+  rootDir: string,
+  confDir: string
+): Record<"cpath" | "epath", any> => {
+  /** validate configs directory & default config file */
+  const path: string = join(rootDir, confDir);
+  const cfile: string[] = globSync(`${path}/common.{js,ts}`);
+  try {
+    if (!cfile.length)
+      throw new Error(`common config file not found for ${path}`);
+  } catch (e) {
+    if (e instanceof Error) {
+      console.error(chalk.bgRed(" ENOENT "), chalk.red(e.message));
+      console.group();
+      console.log(`Please create a directory as suggested below:`);
+      console.group();
+      console.log(`.`);
+      console.log(`└──${confDir}/`);
+      console.group();
+      console.log(`├── common.(js|ts)`);
+      console.log(`├── development.(js|ts)`);
+      console.log(`└── production.(js|ts)`);
+      console.groupCollapsed();
+      process.exit(1);
+    }
+  }
+  /** validate environment configuration file */
+  const efile: string[] = globSync(
+    `${path}/${process.env["NODE_ENV"]}.{js,ts}`
   );
-  return patterns.reduce((confs: Record<string, any>, file: string) => {
-    const module = require(file);
-    const conf = module.default || module;
-
-    confs[path.basename(file, path.extname(file))] = conf;
-
-    return conf;
-  }, {});
-};
-
-const validateEnv = (): void => {
-  const files = globSync(
-    path.resolve(__dirname, "configs", `**/${process.env["NODE_ENV"]}.{js,ts}`)
-  );
-  if (!files.length) {
+  if (!efile.length) {
     if (process.env["NODE_ENV"]) {
       console.error(
         chalk.red(
@@ -74,10 +84,33 @@ const validateEnv = (): void => {
     }
     process.env["NODE_ENV"] = "development";
   }
+  return {
+    cpath: cfile[0],
+    epath: globSync(`${path}/${process.env["NODE_ENV"]}.{js,ts}`)[0],
+  };
 };
 
-export const initGlobalConfig = () => {
-  validateEnv();
-  const conf = readConfigs();
-  return resolveConfig(mergeConfig(conf));
+const dynamicImport = (path: string): Promise<Record<string, any>> =>
+  import(pathToFileURL(path).href).then((module) => module.default || module);
+
+const loadConfig = async (paths: {
+  cpath: string;
+  epath: string;
+}): Promise<Record<"cmodule" | "emodule", any>> => {
+  const cmodule = await dynamicImport(paths.cpath);
+  const emodule = await dynamicImport(paths.epath ?? paths.cpath);
+  return { cmodule, emodule };
+};
+
+type GlobalConfig = {
+  rootDir?: string;
+  configDir?: string;
+};
+export const initGlobalConfig = async ({
+  rootDir = process.cwd(),
+  configDir = "configs",
+}: GlobalConfig): Promise<Record<string, any>> => {
+  const paths = validateConfig(rootDir, configDir);
+  const { cmodule, emodule } = await loadConfig(paths);
+  return resolveConfig(mergeConfig(cmodule, emodule));
 };
